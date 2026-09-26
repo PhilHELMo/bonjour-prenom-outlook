@@ -1,39 +1,80 @@
-/* Bonjour Prénom — activation automatique Outlook */
+/* Bonjour Prénom v4 — réponses + nouveaux messages */
 const CLOSING_KEY = "bonjourPrenomClosing";
 const HTML_MARKER = 'data-bonjour-prenom="1"';
-Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
-Office.actions.associate("onMessageRecipientsChangedHandler", onMessageRecipientsChangedHandler);
-function onNewMessageComposeHandler(event) { tryAutoInsert(event); }
-function onMessageRecipientsChangedHandler(event) { tryAutoInsert(event); }
+
+function onNewMessageComposeHandler(event) {
+  tryAutoInsert(event);
+}
+
+function onMessageRecipientsChangedHandler(event) {
+  tryAutoInsert(event);
+}
+
 function tryAutoInsert(event) {
   const item = Office.context.mailbox.item;
   const closing = Office.context.roamingSettings.get(CLOSING_KEY) || "Bien à toi";
-  item.to.getAsync((toResult) => {
-    if (toResult.status !== Office.AsyncResultStatus.Succeeded || !toResult.value || toResult.value.length === 0) { event.completed(); return; }
+
+  item.to.getAsync({ asyncContext: event }, function (toResult) {
+    const evt = toResult.asyncContext;
+
+    if (toResult.status !== Office.AsyncResultStatus.Succeeded ||
+        !toResult.value || toResult.value.length === 0) {
+      evt.completed();
+      return;
+    }
+
     const recipient = toResult.value[0];
     const firstName = firstNameFromDisplayName(recipient.displayName, recipient.emailAddress);
-    if (!firstName) { event.completed(); return; }
-    item.body.getTypeAsync((tr) => {
-      if (tr.status !== Office.AsyncResultStatus.Succeeded) { event.completed(); return; }
-      const isHtml = tr.value === Office.CoercionType.Html;
+    if (!firstName) {
+      evt.completed();
+      return;
+    }
+
+    item.body.getTypeAsync({ asyncContext: evt }, function (typeResult) {
+      const evt2 = typeResult.asyncContext;
+      if (typeResult.status !== Office.AsyncResultStatus.Succeeded) {
+        evt2.completed();
+        return;
+      }
+
+      const isHtml = typeResult.value === Office.CoercionType.Html;
       const coercionType = isHtml ? Office.CoercionType.Html : Office.CoercionType.Text;
-      item.body.getAsync(coercionType, (br) => {
-        if (br.status !== Office.AsyncResultStatus.Succeeded) { event.completed(); return; }
-        const body = br.value || "";
-        if ((isHtml && body.includes(HTML_MARKER)) ||
-            (stripHtml(body).replace(/\s+/g," ").toLocaleLowerCase("fr-FR").includes(`bonjour ${firstName},`.toLocaleLowerCase("fr-FR")) &&
-             stripHtml(body).replace(/\s+/g," ").toLocaleLowerCase("fr-FR").includes(closing.toLocaleLowerCase("fr-FR")))) {
-          event.completed(); return;
+
+      item.body.getAsync(coercionType, { asyncContext: evt2 }, function (bodyResult) {
+        const evt3 = bodyResult.asyncContext;
+        if (bodyResult.status !== Office.AsyncResultStatus.Succeeded) {
+          evt3.completed();
+          return;
         }
+
+        const body = bodyResult.value || "";
+        if (alreadyInserted(body, isHtml)) {
+          evt3.completed();
+          return;
+        }
+
         const content = isHtml
           ? `<div data-bonjour-prenom="1"><p>Bonjour ${escapeHtml(firstName)},</p><p><br></p><p><br></p><p>${escapeHtml(closing)}</p><p><br></p></div>`
           : `Bonjour ${firstName},\r\n\r\n\r\n\r\n${closing}\r\n\r\n`;
-        item.body.prependAsync(content, { coercionType }, () => event.completed());
+
+        item.body.prependAsync(
+          content,
+          { coercionType: coercionType, asyncContext: evt3 },
+          function (writeResult) {
+            writeResult.asyncContext.completed();
+          }
+        );
       });
     });
   });
 }
-function stripHtml(s) { return String(s).replace(/<[^>]*>/g, " "); }
+
+function alreadyInserted(body, isHtml) {
+  if (isHtml && body.includes(HTML_MARKER)) return true;
+  const plain = stripHtml(body).replace(/\s+/g, " ").toLocaleLowerCase("fr-FR");
+  return plain.includes("bonjour ") &&
+         (plain.includes("bien à toi") || plain.includes("bien à vous"));
+}
 
 function firstNameFromDisplayName(displayName, emailAddress) {
   let s = (displayName || "").trim();
@@ -53,6 +94,16 @@ function firstNameFromDisplayName(displayName, emailAddress) {
   }
   return first;
 }
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function stripHtml(s) {
+  return String(s).replace(/<[^>]*>/g, " ");
 }
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  })[c]);
+}
+
+Office.actions.associate("onNewMessageComposeHandler", onNewMessageComposeHandler);
+Office.actions.associate("onMessageRecipientsChangedHandler", onMessageRecipientsChangedHandler);
