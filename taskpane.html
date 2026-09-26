@@ -2,24 +2,30 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' https://appsforoffice.microsoft.com; script-src 'self' https://appsforoffice.microsoft.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://appsforoffice.microsoft.com; script-src 'self' https://appsforoffice.microsoft.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Bonjour Prénom</title>
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <script defer src="taskpane.js"></script>
   <style>
     body { font-family: Segoe UI, Arial, sans-serif; margin: 18px; color:#242424; }
-    button { font: inherit; padding: 9px 14px; cursor:pointer; }
+    button, select { font: inherit; padding: 8px 12px; }
+    button { cursor:pointer; margin-top:10px; }
+    label { display:block; margin-top:16px; margin-bottom:6px; font-weight:600; }
     #status { margin-top:12px; line-height:1.4; }
     .small { font-size:12px; color:#666; margin-top:18px; }
   </style>
 </head>
 <body>
   <h2>Bonjour Prénom</h2>
-  <p>Insère une salutation pour le premier destinataire du champ « À ».</p>
-  <button id="insert" disabled>Insérer « Bonjour Prénom, »</button>
+  <p>Le complément ajoute automatiquement la salutation et la formule de fin lors de la rédaction.</p>
+  <label for="closing">Formule de fin</label>
+  <select id="closing">
+    <option value="Bien à toi">Bien à toi</option>
+    <option value="Bien à vous">Bien à vous</option>
+  </select>
+  <button id="insert" disabled>Insérer maintenant</button>
   <div id="status"></div>
-  <div class="small">Aucune donnée de messagerie n’est envoyée par ce code à un serveur tiers.</div>
+  <div class="small">Choix par défaut : « Bien à toi ». Aucune donnée de messagerie n’est envoyée par ce code à un serveur tiers.</div>
 </body>
 </html>
