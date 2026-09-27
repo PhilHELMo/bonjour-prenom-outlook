@@ -5,7 +5,7 @@ Office.onReady((info) => {
   const btn = document.getElementById("insert");
   const select = document.getElementById("closing");
   const settings = Office.context.roamingSettings;
-  select.value = settings.get(CLOSING_KEY) || "Bien à toi";
+  select.value = settings.get(CLOSING_KEY) || "Bien à toi,";
   btn.disabled = false;
   select.addEventListener("change", () => {
     settings.set(CLOSING_KEY, select.value);
